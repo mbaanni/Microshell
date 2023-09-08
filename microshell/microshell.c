@@ -1,5 +1,6 @@
 #include<unistd.h>
 #include<stdlib.h>
+#include<sys/wait.h>
 #include<string.h>
 
 int	ft_strlen(char *str)
@@ -14,7 +15,7 @@ void	ft_cd(char **av)
 {
 	if (av[1] && !av[2])
 	{
-		if (chdir(*av)==-1)
+		if (chdir(av[1])==-1)
 		{
 			write(2, "error: cd: cannot change directory to ", 38);
 			write(2, av[1],ft_strlen(av[1]));
@@ -100,7 +101,7 @@ char **next_command(char **av, int count)
 
 int execute(char **av, char **env)
 {
-	int *pid;
+	int	id;
 	int pip[2];
 	int prev[2];
 	int index = 0;
@@ -108,12 +109,11 @@ int execute(char **av, char **env)
 	int i = 0;
 	char **dav;
 	ncmd = number_command(av, &index);
-	if (!strncmp(*av, "cd", -1))
+	if (!strncmp(*av, "cd", ft_strlen(*av)))
 	{
 		ft_cd(av);
 		return index;
 	}
-	pid = malloc(sizeof(int)*ncmd);
 	while (i < ncmd)
 	{
 			if (i < ncmd -1)
@@ -121,16 +121,15 @@ int execute(char **av, char **env)
 				if (pipe(pip)==-1)
 				{
 					write(2,"error: fatal\n",13);
-					free(pid);
 					exit(1);
 				}
 			}
 
-			pid[i] = fork();
+			id = fork();
 			dav = next_command(av, i);
 			if (dav[0][0] == ';')
 				return (index);
-			if (pid[i] == 0)
+			if (id == 0)
 			{
 				if (i > 0)
 				{
@@ -174,21 +173,18 @@ int execute(char **av, char **env)
 			i++;
 	}
 	ncmd = 0;
-	while (wait(0)!=-1);
-	free(pid);
+	while (waitpid(0,0,0)!=-1);
 	return index;
 }
 
 void parse_command(char **av, char **env)
 {
-	int i = 0;
-	int j = 0;
-	while (av[i])
-		i++;
-	while(j < i)
-	{
-		j += execute(av + j, env);
-	}
+	int lent = 0;
+	int index = 0;
+	while (av[lent])
+		lent++;
+	while(index < lent)
+		index += execute(av + index, env);
 }
 int main(int ac , char **av, char **env)
 {
